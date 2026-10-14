@@ -1,0 +1,11 @@
+{
+  "name": "나만의 AI 화학실험실",
+  "short_name": "AI화학실험실",
+  "description": "위험한 시약 없이 가상 비커에서 화학 반응을 실험하는 앱",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f6fb",
+  "theme_color": "#1f6feb",
+  "lang": "ko",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

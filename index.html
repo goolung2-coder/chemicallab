@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>나만의 AI 화학실험실</title>
+  <meta name="description" content="위험한 시약 없이 가상 비커에서 화학 반응을 실험하고, AI 조교에게 원리를 물어보는 앱">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#1f6feb">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>🧪 나만의 AI 화학실험실</h1>
+    <div class="topbar-actions">
+      <button id="btn-notebook" class="ghost" title="실험 노트">📒 노트</button>
+      <button id="btn-settings" class="ghost" title="AI 설정">⚙️ 설정</button>
+    </div>
+  </header>
+
+  <div class="safety-banner" role="note">
+    ⚠️ 이 앱은 <b>가상 실험</b>입니다. 진짜 시약으로 따라 하지 마세요. 실제 실험은 반드시 선생님 지도 아래 학교 실험실에서!
+  </div>
+
+  <main class="layout">
+    <section class="panel shelf" aria-labelledby="shelf-title">
+      <h2 id="shelf-title">시약 선반</h2>
+      <p class="hint">시약을 눌러 비커에 넣으세요. ⓘ로 정보 보기</p>
+      <input id="shelf-search" type="search" placeholder="시약 검색…" aria-label="시약 검색">
+      <ul id="shelf" class="shelf-list"></ul>
+    </section>
+
+    <section class="panel bench" aria-labelledby="bench-title">
+      <div class="bench-head">
+        <h2 id="bench-title">실험대</h2>
+        <button id="btn-empty" class="ghost">🗑️ 비우기</button>
+      </div>
+      <div class="beaker-wrap">
+        <svg id="beaker" viewBox="0 0 220 260" role="img" aria-label="비커">
+          <defs>
+            <clipPath id="beaker-inside">
+              <path d="M52 40 L52 220 Q52 236 68 236 L152 236 Q168 236 168 220 L168 40 Z"/>
+            </clipPath>
+          </defs>
+          <g id="gas-cloud" class="gas-cloud" style="display:none">
+            <circle cx="90" cy="26" r="22"/><circle cx="120" cy="16" r="26"/><circle cx="148" cy="30" r="20"/>
+          </g>
+          <g clip-path="url(#beaker-inside)">
+            <rect id="liquid" x="40" y="236" width="140" height="0" />
+            <rect id="precipitate" x="40" y="236" width="140" height="0" />
+            <g id="metal" style="display:none">
+              <rect id="metal-body" x="98" y="150" width="14" height="82" rx="4"/>
+              <rect id="metal-coat" x="98" y="190" width="14" height="42" rx="4" fill="transparent"/>
+            </g>
+            <g id="bubbles"></g>
+          </g>
+          <g id="foam" class="foam" style="display:none">
+            <ellipse cx="110" cy="40" rx="66" ry="16"/><circle cx="80" cy="30" r="16"/><circle cx="110" cy="22" r="20"/><circle cx="140" cy="30" r="16"/>
+          </g>
+          <path class="beaker-glass" d="M44 34 L52 40 L52 220 Q52 236 68 236 L152 236 Q168 236 168 220 L168 40 L176 34"/>
+          <g class="ticks"><line x1="52" x2="66" y1="200" y2="200"/><line x1="52" x2="66" y1="164" y2="164"/><line x1="52" x2="66" y1="128" y2="128"/><line x1="52" x2="66" y1="92" y2="92"/></g>
+        </svg>
+        <div class="thermo" aria-label="온도">
+          <div class="thermo-tube"><div id="thermo-fill"></div></div>
+          <span id="thermo-label">상온</span>
+        </div>
+      </div>
+      <ul id="contents" class="contents" aria-label="비커 안의 시약"></ul>
+      <div id="result" class="result" aria-live="polite">
+        <p class="placeholder">시약을 두 가지 이상 넣으면 반응 결과가 여기에 나타납니다.</p>
+      </div>
+    </section>
+
+    <section class="panel assistant" aria-labelledby="ai-title">
+      <h2 id="ai-title">🤖 AI 조교</h2>
+      <div id="chat-log" class="chat-log">
+        <div class="msg ai">안녕하세요! 실험 결과가 궁금하거나 반응 원리를 알고 싶으면 물어보세요. 예: "왜 철못에 구리가 생겨?"</div>
+      </div>
+      <form id="chat-form" class="chat-form">
+        <textarea id="chat-input" rows="2" placeholder="질문을 입력하세요…" aria-label="질문"></textarea>
+        <button type="submit" id="chat-send">보내기</button>
+      </form>
+      <p id="ai-status" class="hint"></p>
+    </section>
+  </main>
+
+  <dialog id="dlg-settings">
+    <form method="dialog" class="dialog-body">
+      <h2>AI 설정</h2>
+      <p>AI 조교는 Anthropic의 Claude를 사용합니다. <a href="https://console.anthropic.com/" target="_blank" rel="noopener">Anthropic 콘솔</a>에서 발급한 API 키를 입력하세요.</p>
+      <label>API 키 <input id="api-key" type="password" autocomplete="off" placeholder="sk-ant-..."></label>
+      <p class="hint">키는 이 브라우저에만 저장되며 Anthropic 서버로만 전송됩니다. 사용량에 따라 요금이 청구될 수 있어요. 공용 컴퓨터에서는 사용 후 삭제하세요.</p>
+      <div class="dialog-actions">
+        <button value="clear" id="btn-key-clear" class="ghost">키 삭제</button>
+        <button value="cancel" class="ghost">취소</button>
+        <button value="save" id="btn-key-save">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-info">
+    <form method="dialog" class="dialog-body">
+      <div id="info-body"></div>
+      <div class="dialog-actions"><button value="close">닫기</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-notebook">
+    <form method="dialog" class="dialog-body">
+      <h2>📒 실험 노트</h2>
+      <ol id="notebook-list" class="notebook-list"></ol>
+      <div class="dialog-actions">
+        <button value="clear" id="btn-notebook-clear" class="ghost">노트 지우기</button>
+        <button value="close">닫기</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
