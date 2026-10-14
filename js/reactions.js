@@ -20,8 +20,8 @@ add('vinegar', 'bakingsoda', {
 add('hcl', 'bakingsoda', {
   title: '염산 + 베이킹소다 → 이산화탄소 발생',
   equation: 'HCl + NaHCO₃ → NaCl + H₂O + CO₂↑',
-  explanation: '강한 산이라 식초보다 더 빠르게 이산화탄소가 나온다. 남는 용액은 소금물이다.',
-  effect: { gas: true, gasName: 'CO₂', temp: 'same', danger: 'caution' },
+  explanation: '강한 산이라 식초보다 더 빠르게 이산화탄소가 나온다. 식초와 마찬가지로 열을 흡수하는 반응이라 용액이 살짝 차가워진다. 남는 용액은 소금물이다.',
+  effect: { gas: true, gasName: 'CO₂', temp: 'cool', danger: 'caution' },
 });
 
 // ── 중화 반응 ─────────────────────────────
@@ -153,8 +153,8 @@ add('bleach', 'hcl', {
 });
 add('bleach', 'vinegar', {
   title: '⛔ 락스 + 식초 → 유독한 염소 기체',
-  equation: 'NaClO + 2CH₃COOH → NaCl + H₂O + Cl₂↑ + …',
-  explanation: '식초 같은 약한 산도 락스와 섞이면 염소 기체를 낸다. "천연 세제"라도 락스와 섞으면 안전하지 않다.',
+  equation: 'NaClO + CH₃COOH → CH₃COONa + HOCl\nHOCl + Cl⁻ + H⁺ → Cl₂↑ + H₂O',
+  explanation: '식초에는 염화 이온(Cl⁻)이 없어서 먼저 차아염소산(HOCl)이 생긴다. 그런데 락스에는 만들 때부터 염화 이온이 섞여 있어서, 산성이 된 용액에서 HOCl이 이 염화 이온과 반응해 염소 기체가 나온다. "천연 세제"라도 락스와 섞으면 안전하지 않다.',
   safety: '현실에서 절대 섞지 마세요. 청소할 때는 한 번에 한 가지 세제만 쓰고 환기하세요.',
   effect: { gas: 'toxic', gasName: 'Cl₂ (염소)', temp: 'same', danger: 'danger' },
 });

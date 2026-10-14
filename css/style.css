@@ -163,7 +163,8 @@ h2 { font-size: 1.05rem; margin: 0 0 6px; }
 .card.caution { background: var(--caution-bg); }
 .card.danger { background: var(--danger-bg); border-color: var(--danger); }
 .card h3 { margin: 0 0 6px; font-size: 1rem; }
-.card .eq { font-family: ui-monospace, "SF Mono", Menlo, monospace; background: var(--panel); border-radius: 8px; padding: 6px 8px; overflow-x: auto; white-space: nowrap; }
+.indicator-note { text-align: center; margin: -4px 0 10px; }
+.card .eq { font-family: ui-monospace, "SF Mono", Menlo, monospace; background: var(--panel); border-radius: 8px; padding: 6px 8px; overflow-x: auto; white-space: pre; }
 .card .safety { font-weight: 600; color: var(--danger); }
 .badge { display: inline-block; font-size: .75rem; padding: 1px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle; border: 1px solid currentColor; }
 .badge.safe { color: var(--safe); } .badge.caution { color: var(--caution); } .badge.danger { color: var(--danger); }

@@ -161,6 +161,7 @@ function renderBeaker() {
 
   const contents = $('contents');
   contents.innerHTML = state.contents.map((id) => `<li>${escapeHtml(byId[id].name)}</li>`).join('');
+  show($('indicator-note'), state.contents.some((id) => byId[id].indicator));
 }
 
 function shake() {
