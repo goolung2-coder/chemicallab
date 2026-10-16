@@ -35,7 +35,26 @@
     --safe-bg: #14301e;
     --ai-bubble: #222a45;
     --me-bubble: #3a6fd8;
+    color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1220;
+  --panel: #171c2e;
+  --text: #e6e9f2;
+  --muted: #9aa3bd;
+  --border: #2a3150;
+  --accent: #4c8dff;
+  --glass: #8f9bc0;
+  --safe: #4ac26b;
+  --caution: #e3a33b;
+  --danger: #ff6b6b;
+  --danger-bg: #3a1a1e;
+  --caution-bg: #3a2c12;
+  --safe-bg: #14301e;
+  --ai-bubble: #222a45;
+  --me-bubble: #3a6fd8;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -81,7 +100,7 @@ h2 { font-size: 1.05rem; margin: 0 0 6px; }
   padding: 12px 16px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; z-index: 5;
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
 }
 .topbar-actions { display: flex; gap: 6px; }
 

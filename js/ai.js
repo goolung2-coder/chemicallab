@@ -33,6 +33,28 @@ export function hasApiKey() {
   return Boolean(sessionKey);
 }
 
+// claude.ai 아티팩트로 열렸을 때는 보는 사람의 Claude 계정으로 AI를 쓴다(API 키 불필요).
+// 그 밖의 곳에서는 null이 되어 API 키 방식으로 돌아간다.
+const samplePromise = window.claude?.use
+  ? window.claude.use('sample').catch(() => null)
+  : Promise.resolve(null);
+
+// 'claude' | 'api' | null — 지금 쓸 수 있는 AI 연결 방식
+export async function mode() {
+  if (await samplePromise) return 'claude';
+  return sessionKey ? 'api' : null;
+}
+
+const SAMPLE_ERRORS = {
+  not_granted: 'Claude 사용을 허용하지 않아서 AI 기능을 쓸 수 없어요.',
+  sampling_disabled: '이 계정에서는 Claude를 쓸 수 없어요.',
+  rate_limited: '요청이 너무 많아요. 잠시 후 다시 시도하세요.',
+  session_expired: 'Claude에 다시 로그인해 주세요.',
+  invalid_json: 'AI가 결과를 형식에 맞게 만들지 못했어요. 다시 시도하세요.',
+  empty_completion: 'AI가 답을 만들지 못했어요. 질문을 바꿔 보세요.',
+};
+const sampleError = (e) => SAMPLE_ERRORS[e?.code] || 'AI 연결에 문제가 생겼어요. 잠시 후 다시 시도하세요.';
+
 async function getClient() {
   if (!sessionKey) throw new Error('API 키가 설정되지 않았습니다. 오른쪽 위 ⚙️ 설정에서 입력하세요.');
   if (!clientPromise) {
@@ -59,6 +81,20 @@ const REFUSAL_TEXT = '이 질문은 안전상의 이유로 답할 수 없어요.
 
 // 대화형 질문. onText로 답변이 실시간으로 흘러 들어온다.
 export async function chat(history, onText) {
+  const sample = await samplePromise;
+  if (sample) {
+    try {
+      let seen = '';
+      const { text } = await sample([{ role: 'user', content: SYSTEM_PROMPT }, ...history], {
+        cache: false,
+        onText: ({ text: whole }) => { onText(whole.slice(seen.length)); seen = whole; },
+      });
+      return { text };
+    } catch (e) {
+      if (e?.code === 'refused') return { refused: true, text: REFUSAL_TEXT };
+      return { error: sampleError(e) };
+    }
+  }
   try {
     const client = await getClient();
     const stream = client.beta.messages.stream({
@@ -104,10 +140,48 @@ const PREDICTION_SCHEMA = {
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
 // 데이터베이스에 없는 조합을 AI가 예측. 결과는 reactions.js와 같은 모양으로 바꿔 돌려준다.
+function predictionPrompt(chemicals) {
+  const list = chemicals.map((c) => `- ${c.name} (${c.formula})`).join('\n');
+  return `가상 비커에 다음 시약(교육용 묽은 용액)을 차례로 넣었어. 실제 화학에 근거해서 무슨 일이 일어나는지 예측해 줘. 반응이 거의 없다면 reaction_occurs를 false로 하고 그냥 섞인 용액 색을 알려 줘.\n${list}`;
+}
+
+function toReaction(p) {
+  return {
+    ai: true,
+    none: !p.reaction_occurs,
+    title: String(p.title || ''),
+    equation: String(p.equation || ''),
+    explanation: String(p.explanation || ''),
+    safety: String(p.safety_note || ''),
+    effect: {
+      color: HEX.test(p.solution_color) ? p.solution_color : null,
+      gas: p.gas ? (p.toxic_gas ? 'toxic' : true) : false,
+      gasName: String(p.gas_name || ''),
+      precipitate: HEX.test(p.precipitate_color) ? p.precipitate_color : null,
+      temp: ['cool', 'same', 'warm', 'hot'].includes(p.temperature) ? p.temperature : 'same',
+      danger: ['safe', 'caution', 'danger'].includes(p.danger_level) ? p.danger_level : 'caution',
+    },
+  };
+}
+
+// 데이터베이스에 없는 조합을 AI가 예측. 결과는 reactions.js와 같은 모양으로 바꿔 돌려준다.
 export async function predictReaction(chemicals) {
+  const sample = await samplePromise;
+  if (sample) {
+    try {
+      const fields = Object.entries(PREDICTION_SCHEMA.properties)
+        .map(([k, v]) => `- ${k}: ${v.enum ? v.enum.join(' | ') : v.type}${v.description ? ` (${v.description})` : ''}`)
+        .join('\n');
+      const p = await sample.json(`${SYSTEM_PROMPT}\n\n${predictionPrompt(chemicals)}\n\n다음 필드를 모두 가진 JSON 객체 하나로만 답해:\n${fields}`);
+      if (!p || typeof p !== 'object') return { error: SAMPLE_ERRORS.invalid_json };
+      return { reaction: toReaction(p) };
+    } catch (e) {
+      if (e?.code === 'refused') return { error: REFUSAL_TEXT };
+      return { error: sampleError(e) };
+    }
+  }
   try {
     const client = await getClient();
-    const list = chemicals.map((c) => `- ${c.name} (${c.formula})`).join('\n');
     const message = await client.beta.messages.create({
       model: MODEL,
       max_tokens: 8000,
@@ -118,33 +192,12 @@ export async function predictReaction(chemicals) {
         format: { type: 'json_schema', schema: PREDICTION_SCHEMA },
       },
       system: SYSTEM_PROMPT,
-      messages: [{
-        role: 'user',
-        content: `가상 비커에 다음 시약(교육용 묽은 용액)을 차례로 넣었어. 실제 화학에 근거해서 무슨 일이 일어나는지 예측해 줘. 반응이 거의 없다면 reaction_occurs를 false로 하고 그냥 섞인 용액 색을 알려 줘.\n${list}`,
-      }],
+      messages: [{ role: 'user', content: predictionPrompt(chemicals) }],
     });
     if (message.stop_reason === 'refusal') return { error: REFUSAL_TEXT };
     const text = message.content.find((b) => b.type === 'text')?.text;
     if (!text) return { error: 'AI가 결과를 만들지 못했습니다. 다시 시도하세요.' };
-    const p = JSON.parse(text);
-    return {
-      reaction: {
-        ai: true,
-        none: !p.reaction_occurs,
-        title: p.title,
-        equation: p.equation,
-        explanation: p.explanation,
-        safety: p.safety_note,
-        effect: {
-          color: HEX.test(p.solution_color) ? p.solution_color : null,
-          gas: p.gas ? (p.toxic_gas ? 'toxic' : true) : false,
-          gasName: p.gas_name,
-          precipitate: HEX.test(p.precipitate_color) ? p.precipitate_color : null,
-          temp: p.temperature,
-          danger: p.danger_level,
-        },
-      },
-    };
+    return { reaction: toReaction(JSON.parse(text)) };
   } catch (err) {
     return { error: friendlyError(err) };
   }

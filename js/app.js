@@ -259,7 +259,7 @@ function renderResults(opts = {}) {
 }
 
 async function predictWithAI(btn) {
-  if (!ai.hasApiKey()) {
+  if (!(await ai.mode())) {
     toast('AI를 쓰려면 ⚙️ 설정에서 API 키를 입력하세요.');
     $('btn-settings').click();
     return;
@@ -333,7 +333,7 @@ function beakerContext() {
 async function sendChat(text) {
   text = text.trim();
   if (!text) return;
-  if (!ai.hasApiKey()) {
+  if (!(await ai.mode())) {
     addMsg('err', 'AI 조교를 쓰려면 ⚙️ 설정에서 Anthropic API 키를 입력하세요.');
     return;
   }
@@ -434,3 +434,11 @@ function init() {
 }
 
 init();
+
+// claude.ai에서 열면 보는 사람의 Claude 계정을 쓰므로 API 키 설정이 필요 없다.
+ai.mode().then((m) => {
+  if (m === 'claude') {
+    $('btn-settings').hidden = true;
+    $('ai-status').textContent = '내 Claude 계정으로 AI 조교를 써요. 처음 질문할 때 사용 허용을 물어봐요.';
+  }
+});
