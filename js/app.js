@@ -1,6 +1,7 @@
 import { CHEMICALS, HAZARDS, byId } from './chemicals.js';
 import { findReaction, REACTION_TYPES } from './reactions.js';
 import * as ai from './ai.js';
+import { setupLock } from './lock.js';
 import { MISSIONS, missionById, TEXTBOOK } from './guide.js';
 
 const MAX_ITEMS = 6;
@@ -607,6 +608,7 @@ function init() {
   }
 }
 
+setupLock();
 init();
 
 // claude.ai에서 열면 보는 사람의 Claude 계정을 쓰므로 API 키 설정이 필요 없다.

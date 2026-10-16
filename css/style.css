@@ -62,6 +62,17 @@
 
 * { box-sizing: border-box; }
 
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.lock { min-height: 100vh; display: grid; place-items: center; padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.lock-card { width: min(380px, 100%); background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; display: grid; gap: 12px; text-align: center; }
+.lock-card h1 { font-size: 1.15rem; }
+.lock-card p { margin: 0; color: var(--muted); }
+.lock-icon { font-size: 2rem; }
+.lock-remember { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: .88rem; color: var(--muted); }
+.lock-remember input { width: auto; }
+.lock-error { color: var(--danger) !important; min-height: 1.4em; font-size: .9rem; }
+
 body {
   margin: 0;
   background: var(--bg);

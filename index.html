@@ -11,11 +11,26 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <section id="lock" class="lock" aria-labelledby="lock-title">
+    <form id="lock-form" class="lock-card">
+      <div class="lock-icon" aria-hidden="true">🔒</div>
+      <h1 id="lock-title">나만의 AI 화학실험실</h1>
+      <p>선생님께 받은 비밀번호를 입력하세요.</p>
+      <label for="lock-input" class="sr-only">비밀번호</label>
+      <input id="lock-input" type="password" autocomplete="current-password" placeholder="비밀번호" required>
+      <label class="lock-remember"><input id="lock-remember" type="checkbox" checked> 이 기기에서 기억하기</label>
+      <button type="submit">들어가기</button>
+      <p id="lock-error" class="lock-error" role="alert"></p>
+    </form>
+  </section>
+
+  <div id="app" hidden>
   <header class="topbar">
     <h1>🧪 나만의 AI 화학실험실</h1>
     <div class="topbar-actions">
       <button id="btn-notebook" class="ghost" title="실험 노트">📒 노트</button>
       <button id="btn-settings" class="ghost" title="AI 설정">⚙️ 설정</button>
+      <button id="btn-lock" class="ghost" title="다시 잠그기">🔒 잠금</button>
     </div>
   </header>
 
@@ -124,6 +139,8 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" hidden></div>
+
+  </div>
 
   <script type="module" src="js/app.js"></script>
 </body>
