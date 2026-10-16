@@ -15,6 +15,7 @@
   --safe-bg: #e6f6ea;
   --ai-bubble: #eef3ff;
   --me-bubble: #1f6feb;
+  --selected-bg: #dce8ff;
   --radius: 14px;
 }
 
@@ -35,6 +36,7 @@
     --safe-bg: #14301e;
     --ai-bubble: #222a45;
     --me-bubble: #3a6fd8;
+    --selected-bg: #1d3366;
     color-scheme: dark;
   }
 }
@@ -54,6 +56,7 @@
   --safe-bg: #14301e;
   --ai-bubble: #222a45;
   --me-bubble: #3a6fd8;
+  --selected-bg: #1d3366;
   color-scheme: dark;
 }
 
@@ -134,7 +137,15 @@ h2 { font-size: 1.05rem; margin: 0 0 6px; }
 .chem {
   display: flex; align-items: center; gap: 8px;
   border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px;
+  transition: background .2s ease, border-color .2s ease;
 }
+.chem:hover { border-color: var(--accent); }
+.chem.selected { background: var(--selected-bg); border-color: var(--accent); box-shadow: inset 4px 0 0 var(--accent); }
+.chem.selected .chem-name { font-weight: 700; }
+.chem-check { display: none; margin-left: auto; font-size: .75rem; font-weight: 700; color: var(--accent-text); background: var(--accent); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.chem.selected .chem-check { display: inline-block; }
+.chem.pop { animation: pop .25s ease; }
+@keyframes pop { 50% { transform: scale(.96); } }
 .chem-add {
   flex: 1; white-space: normal; display: flex; align-items: center; gap: 8px; text-align: left;
   background: transparent; color: var(--text); padding: 2px;

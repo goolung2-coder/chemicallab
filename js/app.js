@@ -40,15 +40,27 @@ function renderShelf(filter = '') {
     if (q && !`${c.name} ${c.formula}`.toLowerCase().includes(q)) continue;
     const li = document.createElement('li');
     li.className = 'chem';
+    li.dataset.chem = c.id;
     const hz = c.hazards.map((h) => HAZARDS[h].icon).join('');
     li.innerHTML = `
       <button class="chem-add" data-id="${c.id}" title="${escapeHtml(c.name)} 넣기">
         <span class="chem-swatch ${c.state === 'metal' ? 'metal' : ''}" style="background:${c.color}"></span>
         <span><span class="chem-name">${escapeHtml(c.name)}</span><span class="chem-formula">${escapeHtml(c.formula)}</span></span>
+        <span class="chem-check" aria-hidden="true">✓ 넣음</span>
       </button>
       <span class="chem-hz" aria-label="위험 표시">${hz}</span>
       <button class="chem-info" data-info="${c.id}" aria-label="${escapeHtml(c.name)} 정보">ⓘ</button>`;
     list.appendChild(li);
+  }
+  markShelf();
+}
+
+// 비커에 들어 있는 시약은 선반에서 색을 바꿔 선택된 것을 보여 준다.
+function markShelf() {
+  for (const li of $('shelf').children) {
+    const on = state.contents.includes(li.dataset.chem);
+    li.classList.toggle('selected', on);
+    li.querySelector('.chem-add').setAttribute('aria-pressed', String(on));
   }
 }
 
@@ -127,6 +139,7 @@ const TEMP = {
 };
 
 function renderBeaker() {
+  markShelf();
   const n = state.contents.filter((id) => byId[id].state !== 'metal').length;
   const level = Math.min(n, MAX_ITEMS) * 30;
   const liquid = $('liquid');
@@ -454,7 +467,13 @@ function init() {
     const add = e.target.closest('[data-id]');
     const info = e.target.closest('[data-info]');
     if (info) showInfo(info.dataset.info);
-    else if (add) addChemical(add.dataset.id);
+    else if (add) {
+      addChemical(add.dataset.id);
+      const li = add.closest('.chem');
+      li.classList.remove('pop');
+      void li.offsetWidth;
+      li.classList.add('pop');
+    }
   });
   $('btn-empty').addEventListener('click', resetBeaker);
 
