@@ -1,6 +1,7 @@
 import { CHEMICALS, HAZARDS, byId } from './chemicals.js';
 import { findReaction, REACTION_TYPES } from './reactions.js';
 import * as ai from './ai.js';
+import { MISSIONS, missionById, TEXTBOOK } from './guide.js';
 
 const MAX_ITEMS = 6;
 const NOTEBOOK_KEY = 'chemlab.notebook';
@@ -18,6 +19,7 @@ const state = {
   temp: 'same',
   danger: 'safe',
   reactions: [],     // 이번 비커에서 일어난 반응
+  guide: null,       // 진행 중인 교과서 실험 가이드 id
 };
 
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => (
@@ -140,6 +142,7 @@ const TEMP = {
 
 function renderBeaker() {
   markShelf();
+  renderGuide();
   const n = state.contents.filter((id) => byId[id].state !== 'metal').length;
   const level = Math.min(n, MAX_ITEMS) * 30;
   const liquid = $('liquid');
@@ -204,7 +207,7 @@ function addChemical(id) {
     return;
   }
   if (state.contents.includes(id)) {
-    toast('이미 들어 있는 시약이에요.');
+    removeChemical(id);
     return;
   }
   const prevIndicator = indicatorColor();
@@ -226,6 +229,70 @@ function addChemical(id) {
   } else {
     renderResults();
   }
+}
+
+const EMPTY_EFFECTS = { colorOverride: null, precipitate: null, coat: null, gas: false, temp: 'same', danger: 'safe' };
+
+// 시약 하나를 빼면 남은 시약을 넣었던 순서대로 다시 섞어 비커 상태를 새로 계산한다.
+function removeChemical(id) {
+  const remaining = state.contents.filter((c) => c !== id);
+  const keptAi = state.reactions.filter((r) => r.ai && r.reactants?.every((c) => remaining.includes(c)));
+  Object.assign(state, EMPTY_EFFECTS, { contents: [], reactions: [] });
+  for (const c of remaining) {
+    state.contents.map((other) => findReaction(c, other)).filter(Boolean).forEach(applyReaction);
+    state.contents.push(c);
+  }
+  keptAi.forEach(applyReaction);
+  renderBeaker();
+  renderResults(state.contents.length >= 2 && !state.reactions.length ? { noReaction: true } : {});
+  toast(`${byId[id].name}을(를) 비커에서 뺐어요.`);
+}
+
+// ── 교과서 실험 가이드 ─────────────────────────
+function renderGuide() {
+  const body = $('guide-body');
+  const m = missionById[state.guide];
+  if (!m) {
+    body.innerHTML = '<p class="hint">교과서 단원에 맞춘 실험을 고르면 넣을 시약과 관찰할 점을 차례대로 안내해 줘요.</p>';
+    return;
+  }
+  const done = m.steps.map((st) => state.contents.includes(st.id));
+  const next = done.indexOf(false);
+  const finished = next === -1;
+  body.innerHTML = `
+    <div class="guide-card">
+      <p class="guide-unit">${escapeHtml(TEXTBOOK)} ${escapeHtml(m.unit)}</p>
+      <h3>${escapeHtml(m.title)}</h3>
+      <p><b>목표</b> ${escapeHtml(m.goal)}</p>
+      <ol class="guide-steps">
+        ${m.steps.map((st, i) => {
+          const c = byId[st.id];
+          const cls = done[i] ? 'done' : i === next ? 'next' : '';
+          return `<li class="${cls}">
+            <div class="step-head">
+              <span class="step-mark" aria-hidden="true">${done[i] ? '✓' : i + 1}</span>
+              <span><b>${escapeHtml(c.name)}</b> <span class="formula">${escapeHtml(c.formula)}</span></span>
+              ${done[i] ? '<span class="step-state">넣음</span>' : `<button class="step-add" data-step="${st.id}">넣기</button>`}
+            </div>
+            ${done[i] || i === next ? `<p class="step-observe">${done[i] ? '👀 ' : '다음: '}${escapeHtml(done[i] ? st.observe : '이 시약을 넣어 보세요.')}</p>` : ''}
+          </li>`;
+        }).join('')}
+      </ol>
+      <p class="guide-safety">🦺 ${escapeHtml(m.safety)}</p>
+      ${finished ? `
+        <div class="guide-wrap">
+          <p class="label">🎉 실험 완료! 핵심 개념</p>
+          <p>${escapeHtml(m.concept)}</p>
+          <p class="label">생각해 보기 (눌러서 답 확인)</p>
+          ${m.questions.map((q) => `<details class="qa"><summary>${escapeHtml(q.q)}</summary><p>${escapeHtml(q.a)}</p></details>`).join('')}
+        </div>` : ''}
+    </div>`;
+}
+
+function startMission(id) {
+  state.guide = missionById[id] ? id : null;
+  resetBeaker();
+  if (state.guide) toast(`"${missionById[id].title}" 실험을 시작해요. 비커를 비웠어요.`);
 }
 
 function resetBeaker() {
@@ -414,10 +481,12 @@ function addMsg(cls, text) {
 }
 
 function beakerContext() {
-  if (!state.contents.length) return '';
+  const m = missionById[state.guide];
+  const g = m ? `\n(학생이 진행 중인 교과서 실험: ${TEXTBOOK} ${m.unit} "${m.title}")` : '';
+  if (!state.contents.length) return g;
   const names = state.contents.map((id) => byId[id].name).join(', ');
   const rx = state.reactions.map((r) => r.title).join(' / ');
-  return `\n\n(현재 가상 비커: ${names}${rx ? ` · 관찰된 반응: ${rx}` : ''})`;
+  return `\n\n(현재 가상 비커: ${names}${rx ? ` · 관찰된 반응: ${rx}` : ''})${g}`;
 }
 
 async function sendChat(text) {
@@ -476,6 +545,15 @@ function init() {
     }
   });
   $('btn-empty').addEventListener('click', resetBeaker);
+
+  const sel = $('guide-select');
+  sel.innerHTML = '<option value="">자유 실험 (가이드 없음)</option>'
+    + MISSIONS.map((m) => `<option value="${m.id}">${escapeHtml(m.title)}</option>`).join('');
+  sel.addEventListener('change', () => startMission(sel.value));
+  $('guide-body').addEventListener('click', (e) => {
+    const step = e.target.closest('[data-step]');
+    if (step) addChemical(step.dataset.step);
+  });
 
   $('result').addEventListener('click', (e) => {
     if (e.target.id === 'btn-predict') predictWithAI(e.target);

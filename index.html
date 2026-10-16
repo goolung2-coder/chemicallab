@@ -26,7 +26,7 @@
   <main class="layout">
     <section class="panel shelf" aria-labelledby="shelf-title">
       <h2 id="shelf-title">시약 선반</h2>
-      <p class="hint">시약을 눌러 비커에 넣으세요. ⓘ로 정보 보기</p>
+      <p class="hint">시약을 누르면 비커에 들어가고, 다시 누르면 빠져요. ⓘ로 정보 보기</p>
       <input id="shelf-search" type="search" placeholder="시약 검색…" aria-label="시약 검색">
       <ul id="shelf" class="shelf-list"></ul>
     </section>
@@ -35,6 +35,11 @@
       <div class="bench-head">
         <h2 id="bench-title">실험대</h2>
         <button id="btn-empty" class="ghost">🗑️ 비우기</button>
+      </div>
+      <div class="guide">
+        <label for="guide-select" class="guide-label">📘 교과서 실험 가이드</label>
+        <select id="guide-select"></select>
+        <div id="guide-body"></div>
       </div>
       <div class="beaker-wrap">
         <svg id="beaker" viewBox="0 0 220 260" role="img" aria-label="비커">

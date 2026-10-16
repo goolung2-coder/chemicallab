@@ -183,6 +183,30 @@ h2 { font-size: 1.05rem; margin: 0 0 6px; }
 .thermo-tube { width: 14px; height: 140px; border: 2px solid var(--glass); border-radius: 10px; position: relative; overflow: hidden; }
 #thermo-fill { position: absolute; bottom: 0; left: 0; right: 0; height: 40%; background: #4c8dff; transition: height .8s ease, background .8s ease; }
 
+.guide { display: grid; gap: 6px; margin: 8px 0 4px; }
+.guide-label { font-weight: 700; font-size: .9rem; }
+.guide select { font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.guide-card { border: 1px solid var(--accent); border-radius: 12px; padding: 12px; background: var(--bg); display: grid; gap: 6px; }
+.guide-card h3 { margin: 0; font-size: 1rem; text-wrap: balance; }
+.guide-card p { margin: 0; }
+.guide-unit { font-size: .78rem; color: var(--accent); font-weight: 700; }
+.guide-steps { list-style: none; padding: 0; margin: 4px 0; display: grid; gap: 6px; }
+.guide-steps li { border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px; background: var(--panel); }
+.guide-steps li.next { border-color: var(--accent); }
+.guide-steps li.done { background: var(--selected-bg); }
+.step-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.step-mark { width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; font-size: .8rem; font-weight: 700; border: 1px solid var(--border); flex: none; }
+.done .step-mark { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.step-head .step-add, .step-head .step-state { margin-left: auto; }
+.step-add { padding: 4px 12px; font-size: .85rem; }
+.step-state { font-size: .8rem; color: var(--accent); font-weight: 700; }
+.step-observe { font-size: .88rem; margin: 4px 0 0 30px !important; color: var(--text); }
+.guide-safety { font-size: .85rem; color: var(--muted); }
+.guide-wrap { border-top: 1px dashed var(--border); padding-top: 8px; display: grid; gap: 6px; }
+.guide-wrap .label { margin: 0; font-size: .78rem; font-weight: 700; letter-spacing: .04em; color: var(--muted); }
+.qa { border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; background: var(--panel); }
+.qa summary { cursor: pointer; font-weight: 600; }
+.qa p { margin: 6px 0 0 !important; color: var(--accent); }
 .contents { list-style: none; padding: 0; margin: 4px 0 10px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; min-height: 28px; }
 .contents li { font-size: .82rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); }
 
