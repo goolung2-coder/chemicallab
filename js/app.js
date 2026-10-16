@@ -1,5 +1,5 @@
 import { CHEMICALS, HAZARDS, byId } from './chemicals.js';
-import { findReaction } from './reactions.js';
+import { findReaction, REACTION_TYPES } from './reactions.js';
 import * as ai from './ai.js';
 
 const MAX_ITEMS = 6;
@@ -224,15 +224,89 @@ function resetBeaker() {
   renderResults();
 }
 
+const typeLabel = (r) => REACTION_TYPES[r.type]?.label || '';
+
+const STATE_ICON = { 기체: '💨', 앙금: '⬇️', 고체: '🟫', 수용액: '💧', 액체: '💧' };
+function productChip(p) {
+  return `<li class="chip"><b class="formula">${escapeHtml(p.formula)}</b> ${escapeHtml(p.name)} <small>${STATE_ICON[p.state] || ''} ${escapeHtml(p.state)}</small></li>`;
+}
+
+// 비커 전체를 정리한다: 넣은 시약 → 일어난 반응 → 최종적으로 남은 것 → 알 수 있는 것
+function summaryCard() {
+  const reagents = state.contents.map((id) => byId[id]);
+  const involved = new Set();
+  const catalysts = new Set();
+  for (const r of state.reactions) {
+    (r.reactants || []).forEach((id) => (r.catalyst === id ? catalysts.add(id) : involved.add(id)));
+  }
+  catalysts.forEach((id) => involved.delete(id));
+
+  const products = new Map();
+  for (const r of state.reactions) for (const p of r.products || []) if (!products.has(p.formula)) products.set(p.formula, p);
+  const where = {
+    기체: '공기 중으로 빠져나가요',
+    앙금: '비커 바닥에 가라앉아요',
+    고체: '금속 표면에 붙어요',
+    수용액: '용액 속에 녹아 있어요',
+    액체: '용액 속에 녹아 있어요',
+  };
+  const groups = {};
+  for (const p of products.values()) {
+    const key = where[p.state] || '비커 안에 있어요';
+    (groups[key] ||= []).push(p);
+  }
+  const leftover = reagents.filter((c) => !involved.has(c.id) && !catalysts.has(c.id));
+  const leftoverRows = leftover.map((c) => `<li class="chip"><b class="formula">${escapeHtml(c.formula)}</b> ${escapeHtml(c.name)} <small>${c.indicator ? '지시약 (색만 바뀜)' : '반응하지 않고 남음'}</small></li>`);
+  const catalystRows = [...catalysts].map((id) => `<li class="chip"><b class="formula">${escapeHtml(byId[id].formula)}</b> ${escapeHtml(byId[id].name)} <small>촉매 (변하지 않고 남음)</small></li>`);
+
+  const learn = [];
+  const addLearn = (t) => { if (t && !learn.includes(t)) learn.push(t); };
+  for (const r of state.reactions) {
+    addLearn(REACTION_TYPES[r.type]?.learn);
+    addLearn(r.learn);
+  }
+  if (state.reactions.some((r) => r.effect?.temp === 'hot' || r.effect?.temp === 'warm')) {
+    addLearn('발열 반응은 열을 내보내서 주변 온도가 올라간다.');
+  }
+  if (state.reactions.some((r) => r.effect?.temp === 'cool')) {
+    addLearn('흡열 반응은 주변의 열을 흡수해서 온도가 내려간다.');
+  }
+  if (state.contents.some((id) => byId[id].indicator)) {
+    addLearn('지시약은 용액이 산성인지 염기성인지에 따라 색이 바뀐다.');
+  }
+  if (state.reactions.some((r) => r.equation)) {
+    addLearn('반응 전후에 원자의 종류와 개수는 그대로다(질량 보존). 반응식 양쪽의 원자 수를 세어 확인해 보자.');
+  }
+  if (!state.reactions.length) addLearn('모든 물질이 섞인다고 반응하는 것은 아니다. 반응이 일어나려면 서로 바꿀 이온이나 전자를 주고받을 수 있어야 한다.');
+
+  const div = document.createElement('div');
+  div.className = 'card summary';
+  div.innerHTML = `
+    <h3>📋 실험 결과 정리</h3>
+    <p class="label">넣은 시약 (반응물)</p>
+    <ul class="chips">${reagents.map((c) => `<li class="chip"><b class="formula">${escapeHtml(c.formula)}</b> ${escapeHtml(c.name)}</li>`).join('')}</ul>
+    <p class="label">일어난 반응</p>
+    ${state.reactions.length
+      ? `<div class="eq">${state.reactions.map((r) => escapeHtml(r.equation || r.title)).join('\n')}</div>`
+      : '<p>눈에 띄는 반응 없이 섞이기만 했어요.</p>'}
+    <p class="label">결국 비커에는</p>
+    ${Object.entries(groups).map(([k, ps]) => `<p class="where">${escapeHtml(k)}</p><ul class="chips">${ps.map(productChip).join('')}</ul>`).join('')}
+    ${catalystRows.length || leftoverRows.length ? `<p class="where">처음 넣은 그대로예요</p><ul class="chips">${[...catalystRows, ...leftoverRows].join('')}</ul>` : ''}
+    <p class="label">이 실험으로 알 수 있는 것</p>
+    <ul class="learn">${learn.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</ul>
+    <p class="hint">각 반응이 끝까지 일어난다고 단순화했어요. 실제로는 넣은 양에 따라 어떤 물질이 남는지가 달라져요.</p>`;
+  return div;
+}
+
 function reactionCard(r) {
   const level = r.effect?.danger || 'safe';
   const div = document.createElement('div');
   div.className = `card ${level}`;
   div.innerHTML = `
-    <h3>${escapeHtml(r.title)}<span class="badge ${level}">${DANGER_LABEL[level]}</span>${r.ai ? '<span class="badge caution">AI 예측</span>' : ''}</h3>
+    <h3>${escapeHtml(r.title)}${typeLabel(r) ? `<span class="badge type">${escapeHtml(typeLabel(r))}</span>` : ''}<span class="badge ${level}">${DANGER_LABEL[level]}</span>${r.ai ? '<span class="badge caution">AI 예측</span>' : ''}</h3>
     ${r.equation ? `<div class="eq">${escapeHtml(r.equation)}</div>` : ''}
     <p>${escapeHtml(r.explanation)}</p>
-    ${r.effect?.gasName ? `<p>💨 발생 기체: <b>${escapeHtml(r.effect.gasName)}</b></p>` : ''}
+    ${r.products?.length ? `<p class="label">생성물</p><ul class="chips">${r.products.map(productChip).join('')}</ul>` : ''}
     ${r.safety ? `<p class="safety">🛑 ${escapeHtml(r.safety)}</p>` : ''}
     ${r.ai ? '<p class="hint">AI 예측은 틀릴 수 있어요. 교과서나 선생님께 확인해 보세요.</p>' : ''}
     <div class="card-actions"><button class="ghost" data-ask="${escapeHtml(r.title)}">🤖 이 반응 더 물어보기</button></div>`;
@@ -255,6 +329,7 @@ function renderResults(opts = {}) {
       <div class="card-actions"><button id="btn-predict">🤖 AI에게 반응 예측 요청</button></div>`;
     box.appendChild(div);
   }
+  if (state.contents.length >= 2) box.prepend(summaryCard());
   for (const r of [...state.reactions].reverse()) box.appendChild(reactionCard(r));
 }
 
@@ -284,6 +359,7 @@ async function predictWithAI(btn) {
     box.prepend(reactionCard({ ...r, title: r.title || '반응 없음', effect: { danger: r.effect.danger } }));
     return;
   }
+  r.reactants = snapshot.filter((id) => !byId[id].indicator);
   applyReaction(r);
   logToNotebook(r);
   shake();
@@ -297,7 +373,7 @@ function loadNotebook() {
 }
 function logToNotebook(r) {
   const list = loadNotebook();
-  list.unshift({ title: r.title, equation: r.equation, ai: Boolean(r.ai), at: Date.now() });
+  list.unshift({ title: r.title, equation: r.equation, products: (r.products || []).map((p) => `${p.formula} ${p.name}`).join(', '), ai: Boolean(r.ai), at: Date.now() });
   try { localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(list.slice(0, 100))); } catch { /* 저장 불가 */ }
 }
 function openNotebook() {
@@ -305,6 +381,7 @@ function openNotebook() {
   $('notebook-list').innerHTML = list.length
     ? list.map((n) => `<li><b>${escapeHtml(n.title)}</b>${n.ai ? ' <span class="badge caution">AI</span>' : ''}<br>
         ${n.equation ? `<code>${escapeHtml(n.equation)}</code><br>` : ''}
+        ${n.products ? `생성물: ${escapeHtml(n.products)}<br>` : ''}
         <small>${new Date(n.at).toLocaleString('ko-KR')}</small></li>`).join('')
     : '<p class="hint">아직 기록된 실험이 없어요.</p>';
   $('dlg-notebook').returnValue = '';

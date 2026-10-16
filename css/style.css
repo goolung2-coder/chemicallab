@@ -187,6 +187,15 @@ h2 { font-size: 1.05rem; margin: 0 0 6px; }
 .card .safety { font-weight: 600; color: var(--danger); }
 .badge { display: inline-block; font-size: .75rem; padding: 1px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle; border: 1px solid currentColor; }
 .badge.safe { color: var(--safe); } .badge.caution { color: var(--caution); } .badge.danger { color: var(--danger); }
+.card .label { margin: 10px 0 4px; font-size: .78rem; font-weight: 700; letter-spacing: .04em; color: var(--muted); }
+.card .where { margin: 6px 0 2px; font-size: .85rem; }
+.chips { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: .85rem; padding: 3px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); }
+.chip small { color: var(--muted); }
+.formula { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.learn { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.card.summary { background: var(--bg); }
+.badge.type { color: var(--accent); }
 .card-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 
 /* ── AI 조교 ── */

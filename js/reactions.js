@@ -8,7 +8,7 @@
 //   temp        'cool' | 'same' | 'warm' | 'hot'
 //   danger      'safe' | 'caution' | 'danger'
 const R = {};
-const add = (a, b, r) => { R[[a, b].sort().join('+')] = r; };
+const add = (a, b, r) => { R[[a, b].sort().join('+')] = { ...r, reactants: [a, b] }; };
 
 // ── 산 + 탄산염 ─────────────────────────────
 add('vinegar', 'bakingsoda', {
@@ -165,6 +165,48 @@ add('bleach', 'h2o2', {
   safety: '산화제끼리는 섞지 않습니다.',
   effect: { gas: true, gasName: 'O₂', temp: 'hot', danger: 'danger' },
 });
+
+// ── 반응 종류와 생성물 ─────────────────────────
+// 반응 종류마다 "이 실험으로 알 수 있는 것"을 하나씩 정해 둔다.
+export const REACTION_TYPES = {
+  acidCarbonate: { label: '산 + 탄산염', learn: '산은 탄산염·탄산수소염과 반응해 염, 물, 이산화탄소를 만든다. 이산화탄소는 석회수를 뿌옇게 만드는 것으로 확인할 수 있다.' },
+  neutralization: { label: '중화 반응', learn: '산의 H⁺와 염기의 OH⁻가 만나 물이 되고(H⁺ + OH⁻ → H₂O), 남은 이온끼리 염이 된다. 중화 반응은 열이 나는 발열 반응이다.' },
+  metalAcid: { label: '금속 + 산', learn: '수소보다 반응성이 큰 금속은 산과 반응해 수소 기체를 낸다. 반응성이 클수록(Mg > Zn > Fe) 더 빠르고 격렬하다.' },
+  displacement: { label: '금속 치환', learn: '반응성이 큰 금속은 반응성이 작은 금속의 이온에게 전자를 주고 자신은 이온이 된다. 이것으로 금속의 반응성 순서를 알 수 있다(산화·환원).' },
+  precipitation: { label: '앙금 생성', learn: '두 용액 속 이온 중 물에 녹지 않는 조합이 만나면 앙금이 생긴다. 앙금의 색으로 용액에 어떤 이온이 있는지 알아낼 수 있다(이온 검출).' },
+  complex: { label: '착이온 생성', learn: '금속 이온이 다른 분자에 둘러싸여 착이온이 되면 색이 크게 바뀔 수 있다.' },
+  redox: { label: '산화·환원', learn: '한 물질이 전자를 잃으면(산화) 다른 물질은 그 전자를 얻는다(환원). 산화와 환원은 항상 함께 일어난다.' },
+  decomposition: { label: '촉매 분해', learn: '촉매는 자신은 변하지 않으면서 반응을 빠르게 한다. 과산화수소는 촉매가 있으면 물과 산소로 빠르게 분해된다.' },
+  danger: { label: '위험한 조합', learn: '집에서 쓰는 세제도 섞으면 유독 기체가 생길 수 있다. 제품의 성분과 "섞지 마시오" 표시를 확인하고, 세제는 한 번에 한 가지만 쓴다.' },
+};
+
+// [화학식, 이름, 상태] — 상태: 기체 | 앙금 | 고체 | 수용액 | 액체
+const meta = (a, b, type, products, extra = {}) => {
+  Object.assign(R[[a, b].sort().join('+')], { type, products: products.map(([formula, name, state]) => ({ formula, name, state })), ...extra });
+};
+meta('vinegar', 'bakingsoda', 'acidCarbonate', [['CH₃COONa', '아세트산나트륨', '수용액'], ['H₂O', '물', '액체'], ['CO₂', '이산화탄소', '기체']]);
+meta('hcl', 'bakingsoda', 'acidCarbonate', [['NaCl', '염화나트륨(소금)', '수용액'], ['H₂O', '물', '액체'], ['CO₂', '이산화탄소', '기체']]);
+meta('hcl', 'naoh', 'neutralization', [['NaCl', '염화나트륨(소금)', '수용액'], ['H₂O', '물', '액체']]);
+meta('vinegar', 'naoh', 'neutralization', [['CH₃COONa', '아세트산나트륨', '수용액'], ['H₂O', '물', '액체']]);
+meta('hcl', 'nh3', 'neutralization', [['NH₄Cl', '염화암모늄', '수용액']]);
+meta('zn', 'hcl', 'metalAcid', [['ZnCl₂', '염화아연', '수용액'], ['H₂', '수소', '기체']]);
+meta('mg', 'hcl', 'metalAcid', [['MgCl₂', '염화마그네슘', '수용액'], ['H₂', '수소', '기체']]);
+meta('mg', 'vinegar', 'metalAcid', [['Mg(CH₃COO)₂', '아세트산마그네슘', '수용액'], ['H₂', '수소', '기체']]);
+meta('zn', 'vinegar', 'metalAcid', [['Zn(CH₃COO)₂', '아세트산아연', '수용액'], ['H₂', '수소', '기체']]);
+meta('fe', 'cuso4', 'displacement', [['FeSO₄', '황산철(II)', '수용액'], ['Cu', '구리', '고체']]);
+meta('zn', 'cuso4', 'displacement', [['ZnSO₄', '황산아연', '수용액'], ['Cu', '구리', '고체']]);
+meta('mg', 'cuso4', 'displacement', [['MgSO₄', '황산마그네슘', '수용액'], ['Cu', '구리', '고체']]);
+meta('agno3', 'nacl', 'precipitation', [['AgCl', '염화은 (흰색)', '앙금'], ['NaNO₃', '질산나트륨', '수용액']]);
+meta('agno3', 'hcl', 'precipitation', [['AgCl', '염화은 (흰색)', '앙금'], ['HNO₃', '질산', '수용액']]);
+meta('agno3', 'ki', 'precipitation', [['AgI', '아이오딘화은 (노란색)', '앙금'], ['KNO₃', '질산칼륨', '수용액']]);
+meta('cuso4', 'naoh', 'precipitation', [['Cu(OH)₂', '수산화구리(II) (파란색)', '앙금'], ['Na₂SO₄', '황산나트륨', '수용액']]);
+meta('cuso4', 'nh3', 'complex', [['[Cu(NH₃)₄]²⁺', '테트라암민구리(II) 이온 (진한 남색)', '수용액']]);
+meta('cuso4', 'ki', 'redox', [['CuI', '아이오딘화구리(I) (흰색)', '앙금'], ['I₂', '아이오딘 (갈색)', '수용액'], ['K₂SO₄', '황산칼륨', '수용액']]);
+meta('h2o2', 'ki', 'decomposition', [['H₂O', '물', '액체'], ['O₂', '산소', '기체']], { catalyst: 'ki' });
+meta('bleach', 'nh3', 'danger', [['NH₂Cl', '클로라민 (유독)', '기체'], ['NaOH', '수산화나트륨', '수용액']]);
+meta('bleach', 'hcl', 'danger', [['Cl₂', '염소 (유독)', '기체'], ['NaCl', '염화나트륨', '수용액'], ['H₂O', '물', '액체']]);
+meta('bleach', 'vinegar', 'danger', [['HOCl', '차아염소산', '수용액'], ['Cl₂', '염소 (유독)', '기체'], ['CH₃COONa', '아세트산나트륨', '수용액'], ['H₂O', '물', '액체']]);
+meta('bleach', 'h2o2', 'danger', [['O₂', '산소', '기체'], ['NaCl', '염화나트륨', '수용액'], ['H₂O', '물', '액체']]);
 
 export function findReaction(a, b) {
   return R[[a, b].sort().join('+')] || null;

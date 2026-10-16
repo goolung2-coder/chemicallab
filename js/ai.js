@@ -120,7 +120,8 @@ const PREDICTION_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   required: ['reaction_occurs', 'title', 'equation', 'explanation', 'safety_note',
-    'solution_color', 'gas', 'gas_name', 'toxic_gas', 'precipitate_color', 'temperature', 'danger_level'],
+    'solution_color', 'gas', 'gas_name', 'toxic_gas', 'precipitate_color', 'temperature', 'danger_level',
+    'products', 'reaction_type', 'learning_point'],
   properties: {
     reaction_occurs: { type: 'boolean' },
     title: { type: 'string', description: '한 줄 요약 (예: "A + B → 흰색 앙금")' },
@@ -134,6 +135,25 @@ const PREDICTION_SCHEMA = {
     precipitate_color: { type: 'string', description: '앙금 색 #rrggbb, 앙금이 없으면 빈 문자열' },
     temperature: { type: 'string', enum: ['cool', 'same', 'warm', 'hot'] },
     danger_level: { type: 'string', enum: ['safe', 'caution', 'danger'] },
+    products: {
+      type: 'array',
+      description: '생성물 목록. 반응이 없으면 빈 배열',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['formula', 'name', 'state'],
+        properties: {
+          formula: { type: 'string', description: '화학식 (아래첨자는 ₂ 같은 유니코드)' },
+          name: { type: 'string', description: '한국어 이름' },
+          state: { type: 'string', enum: ['기체', '앙금', '고체', '수용액', '액체'] },
+        },
+      },
+    },
+    reaction_type: {
+      type: 'string',
+      enum: ['acidCarbonate', 'neutralization', 'metalAcid', 'displacement', 'precipitation', 'complex', 'redox', 'decomposition', 'danger', 'none'],
+    },
+    learning_point: { type: 'string', description: '이 실험으로 알 수 있는 핵심 개념 한 문장' },
   },
 };
 
@@ -153,6 +173,12 @@ function toReaction(p) {
     equation: String(p.equation || ''),
     explanation: String(p.explanation || ''),
     safety: String(p.safety_note || ''),
+    type: p.reaction_type === 'none' ? undefined : p.reaction_type,
+    learn: String(p.learning_point || ''),
+    products: (Array.isArray(p.products) ? p.products : [])
+      .filter((x) => x && x.formula)
+      .slice(0, 8)
+      .map((x) => ({ formula: String(x.formula), name: String(x.name || ''), state: String(x.state || '수용액') })),
     effect: {
       color: HEX.test(p.solution_color) ? p.solution_color : null,
       gas: p.gas ? (p.toxic_gas ? 'toxic' : true) : false,
@@ -170,7 +196,7 @@ export async function predictReaction(chemicals) {
   if (sample) {
     try {
       const fields = Object.entries(PREDICTION_SCHEMA.properties)
-        .map(([k, v]) => `- ${k}: ${v.enum ? v.enum.join(' | ') : v.type}${v.description ? ` (${v.description})` : ''}`)
+        .map(([k, v]) => `- ${k}: ${v.enum ? v.enum.join(' | ') : v.type === 'array' ? '[{formula, name, state: 기체|앙금|고체|수용액|액체}]' : v.type}${v.description ? ` (${v.description})` : ''}`)
         .join('\n');
       const p = await sample.json(`${SYSTEM_PROMPT}\n\n${predictionPrompt(chemicals)}\n\n다음 필드를 모두 가진 JSON 객체 하나로만 답해:\n${fields}`);
       if (!p || typeof p !== 'object') return { error: SAMPLE_ERRORS.invalid_json };
