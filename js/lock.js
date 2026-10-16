@@ -34,7 +34,7 @@ export function setupLock() {
     }
     const ok = (await sha256(`chemlab:${input.value}`)) === PASSWORD_HASH;
     if (!ok) {
-      error.textContent = '비밀번호가 맞지 않아요. 선생님께 받은 비밀번호를 다시 확인하세요.';
+      error.textContent = '비밀번호가 맞지 않아요. 승리에게 받은 비밀번호를 다시 확인하세요.';
       input.select();
       return;
     }
